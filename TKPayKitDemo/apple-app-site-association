@@ -1,0 +1,11 @@
+{
+    "applinks": {
+        "apps": [],
+        "details": [
+            {
+                "appID": "45DDL523S5.com.sayaDev.TKPayKitDemo",
+                "paths": [ "/app/*", "/qq_conn/2222222/*"]
+            }
+        ]
+    }
+}

@@ -1,0 +1,6 @@
+framework module Pods_TKPayKitDemo {
+  umbrella header "Pods-TKPayKitDemo-umbrella.h"
+
+  export *
+  module * { export * }
+}

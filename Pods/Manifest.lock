@@ -1,0 +1,20 @@
+PODS:
+  - AlipaySDK-iOS (15.7.9)
+  - WechatOpenSDK (1.8.7.1)
+
+DEPENDENCIES:
+  - AlipaySDK-iOS
+  - WechatOpenSDK
+
+SPEC REPOS:
+  trunk:
+    - AlipaySDK-iOS
+    - WechatOpenSDK
+
+SPEC CHECKSUMS:
+  AlipaySDK-iOS: 94ff4c0e17c5e7d126b8207596d5033006534c25
+  WechatOpenSDK: 6a4d1436c15b3b5fe2a0bd383f3046010186da44
+
+PODFILE CHECKSUM: 700764935ef4f8cd48782b09f5dab98e1cdde96a
+
+COCOAPODS: 1.10.1
