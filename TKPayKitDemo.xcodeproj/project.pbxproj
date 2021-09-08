@@ -9,9 +9,11 @@
 /* Begin PBXBuildFile section */
 		3F12B7B626E605250036AAD7 /* apple-app-site-association in Resources */ = {isa = PBXBuildFile; fileRef = 3F12B7B526E605250036AAD7 /* apple-app-site-association */; };
 		3F36690126E6084A00F8BA27 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F36690026E6084A00F8BA27 /* AudioToolbox.framework */; };
-		3F36690C26E6090700F8BA27 /* PayCore.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F36690B26E6090700F8BA27 /* PayCore.m */; };
-		3F36691026E6093900F8BA27 /* PayAli.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F36690F26E6093900F8BA27 /* PayAli.m */; };
-		3F36691426E6094F00F8BA27 /* PayWX.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F36691326E6094F00F8BA27 /* PayWX.m */; };
+		3F8B97E726E786EC0063C17E /* PayBaseMacro.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F8B97E626E786EC0063C17E /* PayBaseMacro.m */; };
+		3F8B97EB26E787000063C17E /* PayAliPay.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F8B97EA26E787000063C17E /* PayAliPay.m */; };
+		3F8B97EF26E787140063C17E /* PayWeChat.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F8B97EE26E787140063C17E /* PayWeChat.m */; };
+		3F8B97F926E789F20063C17E /* PayApplePay.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F8B97F826E789F20063C17E /* PayApplePay.m */; };
+		3F8B97FD26E78A050063C17E /* PayAppInPurchase.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F8B97FC26E78A050063C17E /* PayAppInPurchase.m */; };
 		3FCCA8E826E61B4800DEBBB0 /* TableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FCCA8E726E61B4800DEBBB0 /* TableViewController.m */; };
 		3FD7F85426E5E9E700B7FE47 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FD7F85326E5E9E700B7FE47 /* AppDelegate.m */; };
 		3FD7F85726E5E9E700B7FE47 /* SceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FD7F85626E5E9E700B7FE47 /* SceneDelegate.m */; };
@@ -28,12 +30,17 @@
 		3F12B7B526E605250036AAD7 /* apple-app-site-association */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "apple-app-site-association"; sourceTree = "<group>"; };
 		3F3668FF26E6084A00F8BA27 /* TKPayKitDemo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TKPayKitDemo.entitlements; sourceTree = "<group>"; };
 		3F36690026E6084A00F8BA27 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
-		3F36690A26E6090700F8BA27 /* PayCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PayCore.h; sourceTree = "<group>"; };
-		3F36690B26E6090700F8BA27 /* PayCore.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PayCore.m; sourceTree = "<group>"; };
-		3F36690E26E6093900F8BA27 /* PayAli.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PayAli.h; sourceTree = "<group>"; };
-		3F36690F26E6093900F8BA27 /* PayAli.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PayAli.m; sourceTree = "<group>"; };
-		3F36691226E6094F00F8BA27 /* PayWX.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PayWX.h; sourceTree = "<group>"; };
-		3F36691326E6094F00F8BA27 /* PayWX.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PayWX.m; sourceTree = "<group>"; };
+		3F8B97E526E786EC0063C17E /* PayBaseMacro.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PayBaseMacro.h; sourceTree = "<group>"; };
+		3F8B97E626E786EC0063C17E /* PayBaseMacro.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PayBaseMacro.m; sourceTree = "<group>"; };
+		3F8B97E926E787000063C17E /* PayAliPay.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PayAliPay.h; sourceTree = "<group>"; };
+		3F8B97EA26E787000063C17E /* PayAliPay.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PayAliPay.m; sourceTree = "<group>"; };
+		3F8B97ED26E787140063C17E /* PayWeChat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PayWeChat.h; sourceTree = "<group>"; };
+		3F8B97EE26E787140063C17E /* PayWeChat.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PayWeChat.m; sourceTree = "<group>"; };
+		3F8B97F126E7872D0063C17E /* TKPayKit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TKPayKit.h; sourceTree = "<group>"; };
+		3F8B97F726E789F20063C17E /* PayApplePay.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PayApplePay.h; sourceTree = "<group>"; };
+		3F8B97F826E789F20063C17E /* PayApplePay.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PayApplePay.m; sourceTree = "<group>"; };
+		3F8B97FB26E78A050063C17E /* PayAppInPurchase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PayAppInPurchase.h; sourceTree = "<group>"; };
+		3F8B97FC26E78A050063C17E /* PayAppInPurchase.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PayAppInPurchase.m; sourceTree = "<group>"; };
 		3FCCA8E626E61B4800DEBBB0 /* TableViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TableViewController.h; sourceTree = "<group>"; };
 		3FCCA8E726E61B4800DEBBB0 /* TableViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TableViewController.m; sourceTree = "<group>"; };
 		3FD7F84F26E5E9E700B7FE47 /* TKPayKitDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TKPayKitDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -65,31 +72,49 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		3F36690226E608BD00F8BA27 /* WXPay */ = {
+		3F36690226E608BD00F8BA27 /* WeChat */ = {
 			isa = PBXGroup;
 			children = (
-				3F36691226E6094F00F8BA27 /* PayWX.h */,
-				3F36691326E6094F00F8BA27 /* PayWX.m */,
+				3F8B97ED26E787140063C17E /* PayWeChat.h */,
+				3F8B97EE26E787140063C17E /* PayWeChat.m */,
 			);
-			path = WXPay;
+			path = WeChat;
 			sourceTree = "<group>";
 		};
-		3F36690326E608BD00F8BA27 /* Core */ = {
+		3F36690326E608BD00F8BA27 /* Base */ = {
 			isa = PBXGroup;
 			children = (
-				3F36690A26E6090700F8BA27 /* PayCore.h */,
-				3F36690B26E6090700F8BA27 /* PayCore.m */,
+				3F8B97E526E786EC0063C17E /* PayBaseMacro.h */,
+				3F8B97E626E786EC0063C17E /* PayBaseMacro.m */,
 			);
-			path = Core;
+			path = Base;
 			sourceTree = "<group>";
 		};
 		3F36690426E608BD00F8BA27 /* AliPay */ = {
 			isa = PBXGroup;
 			children = (
-				3F36690E26E6093900F8BA27 /* PayAli.h */,
-				3F36690F26E6093900F8BA27 /* PayAli.m */,
+				3F8B97E926E787000063C17E /* PayAliPay.h */,
+				3F8B97EA26E787000063C17E /* PayAliPay.m */,
 			);
 			path = AliPay;
+			sourceTree = "<group>";
+		};
+		3F8B97F526E7897E0063C17E /* ApplePay */ = {
+			isa = PBXGroup;
+			children = (
+				3F8B97F726E789F20063C17E /* PayApplePay.h */,
+				3F8B97F826E789F20063C17E /* PayApplePay.m */,
+			);
+			path = ApplePay;
+			sourceTree = "<group>";
+		};
+		3F8B97F626E789970063C17E /* AppInPurchase */ = {
+			isa = PBXGroup;
+			children = (
+				3F8B97FB26E78A050063C17E /* PayAppInPurchase.h */,
+				3F8B97FC26E78A050063C17E /* PayAppInPurchase.m */,
+			);
+			path = AppInPurchase;
 			sourceTree = "<group>";
 		};
 		3FD7F84626E5E9E700B7FE47 = {
@@ -136,9 +161,12 @@
 		3FD7F86C26E5EA0C00B7FE47 /* TKPayKit */ = {
 			isa = PBXGroup;
 			children = (
-				3F36690326E608BD00F8BA27 /* Core */,
+				3F8B97F126E7872D0063C17E /* TKPayKit.h */,
+				3F36690326E608BD00F8BA27 /* Base */,
 				3F36690426E608BD00F8BA27 /* AliPay */,
-				3F36690226E608BD00F8BA27 /* WXPay */,
+				3F36690226E608BD00F8BA27 /* WeChat */,
+				3F8B97F526E7897E0063C17E /* ApplePay */,
+				3F8B97F626E789970063C17E /* AppInPurchase */,
 			);
 			path = TKPayKit;
 			sourceTree = "<group>";
@@ -275,12 +303,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3F8B97E726E786EC0063C17E /* PayBaseMacro.m in Sources */,
 				3FD7F85A26E5E9E700B7FE47 /* ViewController.m in Sources */,
 				3FD7F85426E5E9E700B7FE47 /* AppDelegate.m in Sources */,
+				3F8B97EF26E787140063C17E /* PayWeChat.m in Sources */,
+				3F8B97FD26E78A050063C17E /* PayAppInPurchase.m in Sources */,
 				3FD7F86526E5E9E900B7FE47 /* main.m in Sources */,
-				3F36691426E6094F00F8BA27 /* PayWX.m in Sources */,
-				3F36691026E6093900F8BA27 /* PayAli.m in Sources */,
-				3F36690C26E6090700F8BA27 /* PayCore.m in Sources */,
+				3F8B97F926E789F20063C17E /* PayApplePay.m in Sources */,
+				3F8B97EB26E787000063C17E /* PayAliPay.m in Sources */,
 				3FD7F85726E5E9E700B7FE47 /* SceneDelegate.m in Sources */,
 				3FCCA8E826E61B4800DEBBB0 /* TableViewController.m in Sources */,
 			);

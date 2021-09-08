@@ -6,8 +6,7 @@
 //
 
 #import "TableViewController.h"
-#import "PayWX.h"
-#import "PayAli.h"
+#import "TKPayKit.h"
 
 @interface TableViewController ()
 @property (nonatomic, strong) NSArray *dataAry;
@@ -32,6 +31,8 @@
     if (!_dataAry) {
         _dataAry = @[@"微信支付",
                      @"支付宝支付",
+                     @"App In Purchase",
+                     @"Apple Pay"
         ];
     }
     return _dataAry;;
@@ -59,12 +60,29 @@
     NSInteger row = indexPath.row;
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     if (row == 0) {
-        [PayWX payRequest:@{} completion:^(BOOL success, NSString * _Nonnull msg) {
+        [PayWeChat payRequestReq:@{} completion:^(BOOL success, NSString * _Nonnull msg) {
             NSLog(@"success:%d  msg:%@",success,msg);
         }];
+
+        PayResp *pay = [[PayResp alloc] init];
+        pay.returnKey = @"returnKyr";
+        pay.errCode = 2;
+        NSArray *keys = @[@"returnKey",@"errCode",@"errStr",@"type"];
+        NSDictionary *dic = [pay dictionaryWithValuesForKeys:keys];
+        NSLog(@"dic:%@",dic);
+  
+
     }else if ( row == 1){
         NSString *orderString = @"pp_id=2015052600090779";
-        [PayAli payRequest:orderString fromScheme:@"pay"];
+        [PayAliPay payRequestOrder:orderString fromScheme:@"pay"];
+    }else if (row ==2){
+        NSArray *pro = @[@"com.czchat.CZChat01",
+                       @"com.czchat.CZChat02",
+                       @"com.czchat.CZChat03"
+        ];
+        [PayAppInPurchase payPequestProducts:pro quantity:1 completion:^(BOOL success, NSString * _Nonnull msg) {
+
+        }];
     }
 }
 

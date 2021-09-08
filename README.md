@@ -3,6 +3,12 @@
 
 <br>
 
+### 进度：
+* **支付宝**： 已完成
+* **微信支付**：已完成
+* **App In Purchase**：	基本完成，未测试
+* **Apple Pay**：	未完成
+
 ### 配置
 * 微信 \
 https://pay.weixin.qq.com/wiki/doc/api/app/app.php?chapter=8_5	\

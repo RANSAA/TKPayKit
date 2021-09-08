@@ -1,18 +1,18 @@
 //
-//  PayAli.h
+//  PayAliPay.h
 //  TKPayKitDemo
 //
-//  Created by PC on 2021/9/6.
+//  Created by PC on 2021/9/7.
 //
 
 #import <Foundation/Foundation.h>
-#import "PayCore.h"
+#import "PayBaseMacro.h"
 #import <AlipaySDK/AlipaySDK.h>
 
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface PayAli : NSObject
+@interface PayAliPay : NSObject
 
 /**
  在AppDelegate中的
@@ -28,7 +28,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @param orderString 支付订单信息字串
  * @param appScheme 调用支付的app注册在info.plist中的scheme
  */
-+ (void)payRequest:(NSString *)orderString fromScheme:(NSString *)appScheme;
++ (void)payRequestOrder:(NSString *)orderString fromScheme:(NSString *)appScheme;
 
 /**
  *  提交支付请求,对 URL 进行拦截和支付转化
@@ -37,8 +37,9 @@ NS_ASSUME_NONNULL_BEGIN
  *  @param completionBlock 返回拦截后处理后的resultDic
  *  PS:https://opendocs.alipay.com/open/204/105695
  */
-+ (BOOL)payWebRequest:(NSString *)url fromScheme:(NSString *)appScheme callback:(void(^)(NSDictionary *resultDic))completionBlock;
++ (BOOL)payWebRequestUrl:(NSString *)url fromScheme:(NSString *)appScheme callback:(void(^)(NSDictionary *resultDic))completionBlock;
 
 @end
+
 
 NS_ASSUME_NONNULL_END

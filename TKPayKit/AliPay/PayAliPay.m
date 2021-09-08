@@ -1,27 +1,28 @@
 //
-//  PayAli.m
+//  PayAliPay.m
 //  TKPayKitDemo
 //
-//  Created by PC on 2021/9/6.
+//  Created by PC on 2021/9/7.
 //
 
-#import "PayAli.h"
+#import "PayAliPay.h"
 
-@interface PayAli ()
-@property(class, nonatomic, strong, readonly) PayAli *shared;
+@interface PayAliPay ()
+@property(class, nonatomic, strong, readonly) PayAliPay *shared;
 @end
 
-@implementation PayAli
+@implementation PayAliPay
 
-+(PayAli *)shared
++(PayAliPay *)shared
 {
     static dispatch_once_t onceToken;
-    static PayAli *obj = nil;
+    static PayAliPay *obj = nil;
     dispatch_once(&onceToken, ^{
-        obj = [[PayAli alloc] init];
+        obj = [[PayAliPay alloc] init];
     });
     return obj;
 }
+
 
 
 /**
@@ -55,13 +56,18 @@
 
 + (void)handleResult:(NSDictionary *)resultDic
 {
-    NSLog(@"AlipaySDK result = %@",resultDic);
-    if (resultDic && [resultDic objectForKey:@"resultStatus"] && ([[resultDic objectForKey:@"resultStatus"] intValue] == 9000)) {
+    PayLog(@"AlipaySDK result = %@",resultDic);
+
+    NSDictionary *userinfo = @{kNotificationUserInfoPayType:@(PayTypeAliPay),
+                               kNotificationUserInfoResultData:resultDic
+    };
+    NSInteger code = [resultDic[@"resultStatus"] integerValue];
+    if (code == 9000) {
         // 发通知带出支付成功结果
-        [[NSNotificationCenter defaultCenter] postNotificationName:kNotificationNamePaySuccess object:nil userInfo:@{kNotificationUserInfoPayType:@(PayTypeAli)}];
+        [[NSNotificationCenter defaultCenter] postNotificationName:kNotificationNamePaySuccess object:nil userInfo:userinfo];
     } else {
         // 发通知带出支付失败结果
-        [[NSNotificationCenter defaultCenter] postNotificationName:kNotificationNamePayFailed object:nil userInfo:@{kNotificationUserInfoPayType:@(PayTypeAli)}];
+        [[NSNotificationCenter defaultCenter] postNotificationName:kNotificationNamePayFailed object:nil userInfo:userinfo];
     }
 }
 
@@ -72,11 +78,12 @@
  * @param orderString 支付订单信息字串
  * @param appScheme 调用支付的app注册在info.plist中的scheme
  */
-+ (void)payRequest:(NSString *)orderString fromScheme:(NSString *)appScheme
++ (void)payRequestOrder:(NSString *)orderString fromScheme:(NSString *)appScheme
 {
     [[AlipaySDK defaultService] payOrder:orderString fromScheme:appScheme callback:^(NSDictionary *resultDic) {
         //支付结果回调Block，用于wap支付结果回调（非跳转钱包支付）
-        NSLog(@"H5 wap reslut");
+        PayLog(@"H5 wap reslut");
+        
         [self handleResult:resultDic];
     }];
 }
@@ -89,11 +96,11 @@
  *  @param completionBlock 返回拦截后处理后的resultDic
  *  PS:https://opendocs.alipay.com/open/204/105695
  */
-+ (BOOL)payWebRequest:(NSString *)url fromScheme:(NSString *)appScheme callback:(void(^)(NSDictionary *resultDic))completionBlock
++ (BOOL)payWebRequestUrl:(NSString *)url fromScheme:(NSString *)appScheme callback:(void(^)(NSDictionary *resultDic))completionBlock
 {
     return [[AlipaySDK defaultService] payInterceptorWithUrl:url fromScheme:appScheme callback:^(NSDictionary *resultDic) {
         //拦截url
-        NSLog(@"web Native reslut");
+        PayLog(@"web Native reslut");
         [self handleResult:resultDic];
 
         if (completionBlock) {

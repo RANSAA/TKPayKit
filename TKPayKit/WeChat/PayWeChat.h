@@ -1,17 +1,20 @@
 //
-//  PayWX.h
+//  PayWeChat.h
 //  TKPayKitDemo
 //
-//  Created by PC on 2021/9/6.
+//  Created by PC on 2021/9/7.
 //
 
 #import <Foundation/Foundation.h>
-#import "PayCore.h"
+#import "PayBaseMacro.h"
 #import <WXApi.h>
+
+
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface PayWX : NSObject <WXApiDelegate>
+@interface PayWeChat : NSObject <WXApiDelegate>
+
 
 /** 开启日志,在注册之前执行 */
 + (void)startLog;
@@ -51,7 +54,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 
 /** 提交支付请求*/
-+ (void)payRequest:(NSDictionary *)request completion:(void(^)(BOOL success, NSString* msg))completion;
++ (void)payRequestReq:(NSDictionary *)request completion:(void(^)(BOOL success, NSString* msg))completion;
+
 
 
 

@@ -6,8 +6,7 @@
 //
 
 #import "SceneDelegate.h"
-#import "PayWX.h"
-
+#import "TKPayKit.h"
 
 @interface SceneDelegate ()
 
@@ -59,11 +58,12 @@
 API_AVAILABLE(ios(13.0)){
     NSLog(@"open scenc..%@",URLContexts);
     UIOpenURLContext *obj = URLContexts.allObjects.firstObject;
-    [PayWX handleOpenURL:obj.URL];
+    [PayWeChat handleOpenURL:obj.URL];
+    [PayAliPay handleOpenURL:obj.URL];
 }
 
 - (void)scene:(UIScene *)scene continueUserActivity:(NSUserActivity *)userActivity  API_AVAILABLE(ios(13.0)){
-    [PayWX handleOpenUniversalLink:userActivity];
+    [PayWeChat handleOpenUniversalLink:userActivity];
 }
 
 @end

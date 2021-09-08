@@ -6,8 +6,7 @@
 //
 
 #import "AppDelegate.h"
-#import "PayWX.h"
-
+#import "TKPayKit.h"
 @interface AppDelegate ()
 
 @end
@@ -18,21 +17,46 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
 
-    [PayWX startLog];
-    [PayWX registerApp:@"34" universalLink:@"353"];
-    [PayWX checkEnv];
+    [PayWeChat startLog];
+    [PayWeChat registerApp:@"34" universalLink:@"353"];
+    [PayWeChat checkEnv];
+
+
+    [PayAppInPurchase registerApp];
+
+//    NSString *str = @"";
+//    NSDictionary *dic = @{@"111":@"111",@"str":str};
+//    NSLog(@"dic:%@",dic);
+//    NSString *path = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) lastObject];
+//    path = [path stringByAppendingFormat:@"/Preferences/AppInPurchase.plist"];
+//    NSLog(@"path:%@",path);
+//
+////    path = [NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES) lastObject];
+////    path = [path stringByAppendingFormat:@"/TKPayDemo.text"];
+//    NSError *err = nil;
+//    [path writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:&err];
+//    if (err) {
+//        NSLog(@"err:%@",err);
+//    }
+//
+//    NSUserDefaults *ser = [[NSUserDefaults alloc] initWithSuiteName:@"123"];
+//    [ser setBool:YES forKey:@"Test"];
+//    [ser synchronize];
+
+
     return YES;
 }
 
 - (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options
 {
-    return [PayWX handleOpenURL:url];
+    [PayAliPay handleOpenURL:url];
+    return [PayWeChat handleOpenURL:url];
 }
 
 
 - (BOOL)application:(UIApplication *)application continueUserActivity:(NSUserActivity *)userActivity restorationHandler:(void (^)(NSArray<id<UIUserActivityRestoring>> * _Nullable))restorationHandler
 {
-    return [PayWX handleOpenUniversalLink:userActivity];
+    return [PayWeChat handleOpenUniversalLink:userActivity];
 }
 
 #pragma mark - UISceneSession lifecycle

@@ -1,24 +1,24 @@
 //
-//  PayWX.m
+//  PayWeChat.m
 //  TKPayKitDemo
 //
-//  Created by PC on 2021/9/6.
+//  Created by PC on 2021/9/7.
 //
 
-#import "PayWX.h"
+#import "PayWeChat.h"
 
-@interface PayWX ()
-@property(class, nonatomic, strong, readonly) PayWX *shared;
+@interface PayWeChat ()
+@property(class, nonatomic, strong, readonly) PayWeChat *shared;
 @end
 
-@implementation PayWX
+@implementation PayWeChat
 
-+(PayWX *)shared
++(PayWeChat *)shared
 {
     static dispatch_once_t onceToken;
-    static PayWX *obj = nil;
+    static PayWeChat *obj = nil;
     dispatch_once(&onceToken, ^{
-        obj = [[PayWX alloc] init];
+        obj = [[PayWeChat alloc] init];
     });
     return obj;
 }
@@ -28,7 +28,7 @@
 {
     //调用自检函数
     [WXApi checkUniversalLinkReady:^(WXULCheckStep step, WXCheckULStepResult* result) {
-        NSLog(@"%@, %u, %@, %@", @(step), result.success, result.errorInfo, result.suggestion);
+        PayLog(@"%@, %u, %@, %@", @(step), result.success, result.errorInfo, result.suggestion);
     }];
 }
 
@@ -38,7 +38,7 @@
 {
     //在register之前打开log, 后续可以根据log排查问题
     [WXApi startLogByLevel:WXLogLevelDetail logBlock:^(NSString *log) {
-        NSLog(@"WeChatSDK: %@", log);
+        PayLog(@"WeChatSDK: %@", log);
     }];
 
 }
@@ -92,23 +92,23 @@
     if ([WXApi isWXAppInstalled]) {
         if ([WXApi isWXAppSupportApi]) {
             msg = @"微信环境检测通过！";
-            NSLog(@"%@",msg);
+            PayLog(@"%@",msg);
             handle(YES,msg);
         }else{
             msg = @"当前微信的版本不支持OpenApi，请下载最新版本的微信！";
-            NSLog(@"%@",msg);
+            PayLog(@"%@",msg);
             handle(NO,msg);
         }
     }else{
         msg = @"请安装微信！";
-        NSLog(@"%@",msg);
+        PayLog(@"%@",msg);
         handle(NO,msg);
     }
 }
 
 
 /** 提交支付请求*/
-+ (void)payRequest:(NSDictionary *)request completion:(void(^)(BOOL success, NSString* msg))completion
++ (void)payRequestReq:(NSDictionary *)request completion:(void(^)(BOOL success, NSString* msg))completion
 {
     [self checkWXApi:^(BOOL success, NSString *msg) {
         if (success) {
@@ -163,29 +163,36 @@
     if ([resp isKindOfClass:[PayResp class]]) {
         PayResp *tmpResp = (PayResp *)resp;
         NSString *msg = [NSString stringWithFormat:@"支付结果: errCode = %d, retstr = %@", tmpResp.errCode, tmpResp.errStr];
-        NSLog(@"WeiXin Pay msg:%@",msg);
+        PayLog(@"WeiXin Pay msg:%@",msg);
+
+        NSArray *keys = @[@"returnKey",@"errCode",@"errStr",@"type"];
+        NSDictionary *resultDic = [tmpResp dictionaryWithValuesForKeys:keys];
+        NSDictionary *userinfo = @{kNotificationUserInfoPayType:@(PayTypeWeChat),
+                                   kNotificationUserInfoResultData:resultDic
+
+        };
         switch (tmpResp.errCode) {
             case WXSuccess:
-                [self paySuccess];
+                [self paySuccessWithResult:userinfo];
                 break;
             default:
-                [self payFailed];
+                [self payFailedWithResult:userinfo];
                 break;
         }
     }
 }
 
 
-- (void)paySuccess
+- (void)paySuccessWithResult:(NSDictionary *)userInfo
 {
     //服务器端查询支付通知或查询API返回的结果再提示成功
     //后续再向服务器添加一个APP当前支付转态回调接口的请求
-    [[NSNotificationCenter defaultCenter] postNotificationName:kNotificationNamePaySuccess object:nil userInfo:@{kNotificationUserInfoPayType:@(PayTypeWeiXin)}];
+    [[NSNotificationCenter defaultCenter] postNotificationName:kNotificationNamePaySuccess object:nil userInfo:userInfo];
 }
 
-- (void)payFailed
+- (void)payFailedWithResult:(NSDictionary *)userInfo
 {
-    [[NSNotificationCenter defaultCenter] postNotificationName:kNotificationNamePayFailed object:nil userInfo:@{kNotificationUserInfoPayType:@(PayTypeWeiXin)}];
+    [[NSNotificationCenter defaultCenter] postNotificationName:kNotificationNamePayFailed object:nil userInfo:userInfo];
 }
 
 @end
