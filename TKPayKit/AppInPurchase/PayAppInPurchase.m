@@ -11,6 +11,7 @@
 @interface PayAppInPurchase () <SKPaymentTransactionObserver,SKProductsRequestDelegate>
 @property(nonatomic, assign) BOOL isObserver;
 @property(nonatomic, assign) NSUInteger quantity;//商品数量 default = 1
+@property(nonatomic, assign) NSInteger type;
 
 @property(class, nonatomic, strong, readonly) PayAppInPurchase *shared;
 @end
@@ -28,8 +29,7 @@
 }
 
 static NSInteger _verifyType = 0;
-+ (void)setVerifyType:(NSInteger)verifyType
-{
++ (void)setVerifyType:(NSInteger)verifyType{
     _verifyType = verifyType;
 }
 + (NSInteger)verifyType{
@@ -37,14 +37,34 @@ static NSInteger _verifyType = 0;
 }
 
 static NSString* _userID = @"unknown";
-+(void)setUserID:(NSString *)userID
-{
-    _userID = userID;
++(void)setUserID:(NSString *)userID{
+    if (userID.length < 1) {
+        _userID = @"unknown";
+    }else{
+        _userID = userID;
+    }
 }
-+ (NSString *)userID
-{
++ (NSString *)userID{
     return _userID;
 }
+
+static NSString* _password = nil;
++ (void)setPassword:(NSString *)password{
+    _password = password;
+}
++ (NSString *)password{
+    return _password;
+}
+
+static BOOL _excludeOldTransactions = NO;
++ (void)setExcludeOldTransactions:(BOOL)excludeOldTransactions
+{
+    _excludeOldTransactions = excludeOldTransactions;
+}
++ (BOOL)excludeOldTransactions{
+    return _excludeOldTransactions;;
+}
+
 
 - (void)dealloc
 {
@@ -67,6 +87,7 @@ static NSString* _userID = @"unknown";
     }
 }
 
+#pragma mark 注册区域
 /** 注册Store */
 + (void)registerApp
 {
@@ -237,6 +258,7 @@ static NSString* _userID = @"unknown";
 }
 
 
+#pragma mark 缓存记录
 - (NSUserDefaults *)receiptDefaults
 {
     NSUserDefaults *user = [[NSUserDefaults alloc] initWithSuiteName:@"AppInPurchaseTransaction"];
@@ -246,20 +268,22 @@ static NSString* _userID = @"unknown";
 //记录交易记录
 - (void)recordTransaction:(SKPaymentTransaction *)transaction
 {
-    NSURL *receiptURL = [[NSBundle mainBundle] appStoreReceiptURL];
-    NSData *transactionReceipt      = [NSData dataWithContentsOfURL:receiptURL];
-    NSDate *transactionDate         = transaction.transactionDate;
-    NSString *transactionIdentifier = transaction.transactionIdentifier;
-    NSDictionary *info = @{@"userID":PayAppInPurchase.userID,
-                           @"transactionIdentifier":transactionIdentifier,
-                           @"transactionDate":transactionDate,
-                           @"transactionReceipt":transactionReceipt
-    };
+    NSString *path = [[NSBundle.mainBundle appStoreReceiptURL] path];
+    if ([NSFileManager.defaultManager fileExistsAtPath:path] ) {
+        NSURL *receiptURL = [[NSBundle mainBundle] appStoreReceiptURL];
+        NSData *receiptData = [NSData dataWithContentsOfURL:receiptURL];
+        NSDate *transactionDate         = transaction.transactionDate;
+        NSString *transactionIdentifier = transaction.transactionIdentifier;
 
-    NSString *key = [NSString stringWithFormat:@"%@+%@+%@",PayAppInPurchase.userID,transactionIdentifier,transactionDate];
-    NSUserDefaults *user = [self receiptDefaults];
-    [user setValue:info forKey:key];
-    [user synchronize];
+        NSString *key = [NSString stringWithFormat:@"%@+%@",transactionIdentifier,transactionDate];
+        NSDictionary *info = @{@"type":@(self.type),
+                               @"key":key,
+                               @"transactionIdentifier":transactionIdentifier,
+                               @"transactionDate":transactionDate,
+                               @"receiptData":receiptData
+        };
+        [PayAppInPurchase addUserDefaultWithKey:key info:info];
+    }
 }
 
 //移出支付操作完成的凭证缓存数据
@@ -267,16 +291,82 @@ static NSString* _userID = @"unknown";
 {
     NSString *transactionIdentifier = transaction.transactionIdentifier;
     NSDate *transactionDate         = transaction.transactionDate;
-    NSString *key = [NSString stringWithFormat:@"%@+%@+%@",PayAppInPurchase.userID,transactionIdentifier,transactionDate];
-    NSUserDefaults *user = [self receiptDefaults];
-    [user removeObjectForKey:key];
-    [user synchronize];
+    NSString *key = [NSString stringWithFormat:@"%@+%@",transactionIdentifier,transactionDate];
+    [PayAppInPurchase deleteUserDefaultWithKey:key];
 }
+
++ (NSDictionary *)addUserDefaultWithKey:(NSString *)key info:(NSDictionary *)info
+{
+    NSString *userKey = PayAppInPurchase.userID;
+    NSUserDefaults *user = [self.shared receiptDefaults];
+    NSDictionary *userDic = [user valueForKey:userKey];
+    if (!userDic) {
+        userDic = @{};
+    }
+    NSMutableDictionary *mDic = [[NSMutableDictionary alloc] initWithDictionary:userDic];
+    [mDic setValue:info forKey:key];
+    [user setValue:mDic forKey:userKey];
+    [user synchronize];
+
+    return info;
+}
+
++ (NSString *)deleteUserDefaultWithKey:(NSString *)cacheKey
+{
+    NSString *userKey = PayAppInPurchase.userID;
+    NSUserDefaults *user = [self.shared receiptDefaults];
+    NSDictionary *userDic = [user valueForKey:userKey];
+    if (user) {
+        NSMutableDictionary *mDic = [[NSMutableDictionary alloc] initWithDictionary:userDic];
+        [mDic removeObjectForKey:cacheKey];
+        [user setValue:mDic forKey:userKey];
+        [user synchronize];
+    }
+    return cacheKey;
+}
+
+
+/**
+ 检测缓存的未验证的交易凭证,如果有回调自行验证
+
+ */
++ (void)checkVerifyPeceiptCompletion:(void(^)(BOOL verify, NSArray<NSDictionary *>* list))completion
+{
+    NSUserDefaults *user = [self.shared receiptDefaults];
+    NSDictionary *dic = [user valueForKey:PayAppInPurchase.userID];
+    if (dic.count > 0) {
+        NSArray *allValues = dic.allValues;
+        if (PayAppInPurchase.verifyType == 0) {//Apple内部验证
+            //一般一会有一个，这儿，直接循环处理，外部最好依次处理
+            for (NSDictionary *dic in allValues) {
+                NSString *key = dic[@"key"];
+                NSData *receiptData = dic[@"receiptData"];
+                [self.shared verifyReceiptData:receiptData completion:^(NSInteger status) {
+                    if (status == 1) {
+                        PayLog(@"成功。凭证有效");
+                        [self deleteUserDefaultWithKey:key];
+                    }else if (status == 0){
+                        PayLog(@"失败，凭证无效");
+                        [self deleteUserDefaultWithKey:key];
+                    }else{
+                        PayLog(@"网络错误，需要重新验证");
+                    }
+                }];
+            }
+        }else{
+            if (completion) {
+                completion(YES,allValues);
+            }
+        }
+    }
+}
+
+
 
 //交易请求之前，还需要检查是否还有缓存未验证的交易记录
 
 
-
+#pragma mark 验证交易凭证
 //处理交易数据并验证
 //⚠️：验证时需要将数据缓存在本地，防止网络请求失败，APP中断等问题 （还没有处理）
 - (void)verifyReceiptWithTransaction:(SKPaymentTransaction *)transaction
@@ -289,60 +379,200 @@ static NSString* _userID = @"unknown";
     // 从沙盒中获取到购买凭据(原始数据)
     NSURL *receiptURL = [[NSBundle mainBundle] appStoreReceiptURL];
     NSData *receiptData = [NSData dataWithContentsOfURL:receiptURL];
-    NSString * receiptStr = [[NSString alloc]initWithData:receiptData encoding:NSUTF8StringEncoding];
-
+//    NSString * receiptStr = [[NSString alloc]initWithData:receiptData encoding:NSUTF8StringEncoding];
 
     if (PayAppInPurchase.verifyType == 0) {//直接通过Apple验证
-        //处理凭证类型
-        NSString *environment= [self environmentForReceipt:receiptStr];
-        //凭证base64编码
-        NSString *encodeStr = [receiptData base64EncodedStringWithOptions:kNilOptions];
-        NSString *sendString = [NSString stringWithFormat:@"{\"receipt-data\" : \"%@\"}", encodeStr];
-        NSLog(@"_____%@",sendString);
-        NSURL *StoreURL=nil;
-        if ([environment isEqualToString:@"environment=Sandbox"]) {
-            StoreURL= [[NSURL alloc] initWithString: @"https://sandbox.itunes.apple.com/verifyReceipt"];
-        }else{
-            StoreURL= [[NSURL alloc] initWithString: @"https://buy.itunes.apple.com/verifyReceipt"];
-        }
-        //这个二进制数据由服务器进行验证；zl
-        NSData *postData = [NSData dataWithBytes:[sendString UTF8String] length:[sendString length]];
-        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:StoreURL];
-        [request setHTTPMethod:@"POST"];
-        [request setTimeoutInterval:50.0];//120.0---50.0zl
-        [request setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
-        [request setHTTPBody:postData];
-
-        //验证时需要将数据缓存在本地，防止网络请求失败，APP中断等问题
-        //开始请求
-        NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-            if (error) {
-                PayLog(@"验证购买过程中发生错误，错误信息：%@",error.localizedDescription);
+        [self verifyReceiptData:receiptData completion:^(NSInteger status) {
+            if (status == 1 ) {
+                PayLog(@"成功。凭证有效");
+            }else if(status == 0){
+                PayLog(@"失败，凭证无效");
             }else{
-                NSDictionary *dic=[NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:nil];
-                PayLog(@"App In Pruchase verify data:%@",dic);
-                NSInteger status = [dic[@"status"] integerValue];
-                if (status == 0) {
-                    PayLog(@"凭证有效，验证成功，即整个支付操作成功！");
-                    //处理验证结果逻辑，并把操作发送给服务端
-                    [self sendApplePayDataToServerRequsetWith:transaction];
-                }else{
-                    PayLog(@"凭证无效，验证失败，即整个支付操作失败");
-                }
+                PayLog(@"网络错误，需要重新验证");
             }
-
         }];
-        [task resume];
+    }else{//直接自己的服务器验证
 
-    }else{//向自己的服务器验证购买凭证
-        //回调传送到外部自己的服务其验证处理处理receiptData
-        //
     }
 
     //不管交易成功还是失败，Apple Store支付这一步已经完成，只会存在该条交易验证与否，判断该交易是否有效而已。
     [[SKPaymentQueue defaultQueue] finishTransaction: transaction];
+
+
+//    if (PayAppInPurchase.verifyType == 0) {//直接通过Apple验证
+//        //处理凭证类型
+//        NSString *environment= [self environmentForReceipt:receiptStr];
+//        //凭证base64编码
+//        NSString *encodeStr = [receiptData base64EncodedStringWithOptions:kNilOptions];
+//        NSString *sendString = [NSString stringWithFormat:@"{\"receipt-data\" : \"%@\"}", encodeStr];
+//        NSLog(@"_____%@",sendString);
+//        NSURL *StoreURL=nil;
+//        if ([environment isEqualToString:@"environment=Sandbox"]) {
+//            StoreURL= [[NSURL alloc] initWithString: @"https://sandbox.itunes.apple.com/verifyReceipt"];
+//        }else{
+//            StoreURL= [[NSURL alloc] initWithString: @"https://buy.itunes.apple.com/verifyReceipt"];
+//        }
+//        //这个二进制数据由服务器进行验证；zl
+//        NSData *postData = [NSData dataWithBytes:[sendString UTF8String] length:[sendString length]];
+//        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:StoreURL];
+//        [request setHTTPMethod:@"POST"];
+//        [request setTimeoutInterval:50.0];//120.0---50.0zl
+//        [request setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
+//        [request setHTTPBody:postData];
+//
+//        //验证时需要将数据缓存在本地，防止网络请求失败，APP中断等问题
+//        //开始请求
+//        NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+//            if (error) {
+//                PayLog(@"验证购买过程中发生错误，错误信息：%@",error.localizedDescription);
+//            }else{
+//                NSDictionary *dic=[NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:nil];
+//                PayLog(@"App In Pruchase verify data:%@",dic);
+//                NSInteger status = [dic[@"status"] integerValue];
+//                [self machVerifyCode:status];
+//                if (status == 0) {
+//                    PayLog(@"凭证有效，验证成功，即整个支付操作成功！");
+//                    //处理验证结果逻辑，并把操作发送给服务端
+//                    [self sendApplePayDataToServerRequsetWith:transaction];
+//                }else{
+//                    PayLog(@"凭证无效，验证失败，即整个支付操作失败");
+//                }
+//            }
+//
+//        }];
+//        [task resume];
+//
+//    }else{//向自己的服务器验证购买凭证
+//        //回调传送到外部自己的服务其验证处理处理receiptData
+//        //
+//    }
+
+//    //不管交易成功还是失败，Apple Store支付这一步已经完成，只会存在该条交易验证与否，判断该交易是否有效而已。
+//    [[SKPaymentQueue defaultQueue] finishTransaction: transaction];
 }
 
+/**
+ 验证支付凭证数据
+ receiptData：凭证数据
+ completion：验证完毕后回调
+ status:凭证验证状态
+        0：失败，凭证无效
+        1：成功。凭证有效
+        2：网络错误，需要重新验证
+ */
+- (void)verifyReceiptData:(NSData *)receiptData completion:(void(^)(NSInteger status))completion
+{
+    if (!receiptData) {
+        PayLog(@"receiptData数据为空，验证失败");
+        if (completion) {
+            completion(0);
+        }
+        return;
+    }
+    NSString * receiptStr = [[NSString alloc]initWithData:receiptData encoding:NSUTF8StringEncoding];
+    //处理凭证类型
+    NSString *environment= [self environmentForReceipt:receiptStr];
+    //凭证base64编码
+    NSString *encodeStr = [receiptData base64EncodedStringWithOptions:kNilOptions];
+
+//    NSString *sendString = [NSString stringWithFormat:@"{\"receipt-data\" : \"%@\"}", encodeStr];
+    NSMutableDictionary *mBody = @{@"receipt-data":encodeStr}.mutableCopy;
+    [mBody addEntriesFromDictionary:@{@"exclude-old-transactions":@(PayAppInPurchase.excludeOldTransactions)}];
+    if (PayAppInPurchase.password) {
+        [mBody addEntriesFromDictionary:@{@"password":PayAppInPurchase.password}];
+    }
+    NSData* mData = [NSJSONSerialization dataWithJSONObject:mBody options:kNilOptions error:nil];
+    NSString *sendString = [[NSString alloc] initWithData:mData encoding:NSUTF8StringEncoding];
+    PayLog(@"requestBody：%@",sendString);
+
+    NSURL *StoreURL=nil;
+    if ([environment isEqualToString:@"environment=Sandbox"]) {
+        StoreURL= [[NSURL alloc] initWithString: @"https://sandbox.itunes.apple.com/verifyReceipt"];
+    }else{
+        StoreURL= [[NSURL alloc] initWithString: @"https://buy.itunes.apple.com/verifyReceipt"];
+    }
+    //这个二进制数据由服务器进行验证；zl
+    NSData *postData = [NSData dataWithBytes:[sendString UTF8String] length:[sendString length]];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:StoreURL];
+    [request setHTTPMethod:@"POST"];
+    [request setTimeoutInterval:50.0];//120.0---50.0zl
+    [request setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
+    [request setHTTPBody:postData];
+
+    //验证时需要将数据缓存在本地，防止网络请求失败，APP中断等问题
+    //开始请求
+    NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        if (error) {
+            PayLog(@"网络错误，需要重新验证\n验证购买过程中发生错误，错误信息：%@",error.localizedDescription);
+            if (completion) {
+                completion(2);
+            }
+        }else{
+            NSDictionary *dic=[NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:nil];
+            PayLog(@"App In Pruchase verify data:%@",dic);
+            NSInteger status = [dic[@"status"] integerValue];
+            [self machVerifyCode:status];
+            
+            BOOL verifyStatus = status==0?YES:NO;
+            NSInteger code = verifyStatus?1:0;
+            NSString *msg = verifyStatus?@"成功。凭证有效，即整个支付操作成功！":@"失败，凭证无效，即整个支付操作失败";
+            PayLog(@"%@",msg);
+            if (completion) {
+                completion(code);
+            }
+        }
+    }];
+    [task resume];
+}
+
+
+/**
+ Receipt Validation Programming Guide:   https://developer.apple.com/documentation/storekit/original_api_for_in-app_purchase/validating_receipts_with_the_app_store#//apple_ref/doc/uid/TP40010573-CH104-SW1
+ verifyReceipt: https://developer.apple.com/documentation/appstorereceipts/verifyreceipt
+ requestBody:   https://developer.apple.com/documentation/appstorereceipts/requestbody
+ responseBody:  https://developer.apple.com/documentation/appstorereceipts/responsebody
+ expiration_intent: https://developer.apple.com/documentation/appstorereceipts/expiration_intent
+
+ */
+- (void)machVerifyCode:(NSInteger) status
+{
+    NSString *message = @"";
+    switch (status) {
+        case 0:
+            message = @"Success: The receipt as a whole is valid.";
+            break;
+        case 21000:
+            message = @"Error: The App Store could not read the JSON object you provided.";
+            break;
+        case 21002:
+            message = @"Error: The data in the receipt-data property was malformed or missing.";
+            break;
+        case 21003:
+            message = @"Error: The receipt could not be authenticated.";
+            break;
+        case 21004:
+            message = @"Error: The shared secret you provided does not match the shared secret on file for your account.";
+            break;
+        case 21005:
+            message = @"Error: The receipt server is not currently available.";
+            break;
+        case 21006:
+            message = @"Error: This receipt is valid but the subscription has expired. When this status code is returned to your server, the receipt data is also decoded and returned as part of the response. Only returned for iOS 6 style transaction receipts for auto-renewable subscriptions.";
+            break;
+        case 21007:
+            message = @"Error: This receipt is from the test environment, but it was sent to the production environment for verification. Send it to the test environment instead.";
+            break;
+        case 21008:
+            message = @"Error: This receipt is from the production environment, but it was sent to the test environment for verification. Send it to the production environment instead.";
+            break;
+        case 21010:
+            message = @"Error: This receipt could not be authorized. Treat this the same as if a purchase was never made.";
+            break;
+        default: /* 21100-21199 */
+            message = @"Error: Internal data access error.";
+            break;
+    }
+}
 
 //凭证验证成功之后向服务器发送其它的逻辑处理结果
 - (void)sendApplePayDataToServerRequsetWith:(SKPaymentTransaction *)transaction
