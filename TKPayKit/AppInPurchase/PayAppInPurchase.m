@@ -10,8 +10,8 @@
 
 @interface PayAppInPurchase () <SKPaymentTransactionObserver,SKProductsRequestDelegate>
 @property(nonatomic, assign) BOOL isObserver;
-@property(nonatomic, assign) NSUInteger quantity;//商品数量 default = 1
 @property(nonatomic, assign) NSInteger type;
+@property(nonatomic, strong, nullable) PayAppInPurchaseRequest *req;
 
 @property(class, nonatomic, strong, readonly) PayAppInPurchase *shared;
 @end
@@ -98,61 +98,107 @@ static BOOL _excludeOldTransactions = NO;
     }
 }
 
-/**
 
- PS:交易请求之前，还需要检查是否还有缓存未验证的交易记录
+/**
+ * 提交App In Purchase支付请求
+ * products：需要支付的商品productID列表
+ * req:附加的商品信息，如商品数量. 可选
+ * type：自定义的商品类型标注，会在checkRecordReceiptDataWithCompletion:中的list.dic.type中返回
+ * @completion
+ * success：请求是否提交成功
+ * msg：消息
  */
-+ (void)payPequestProducts:(NSArray<NSString *> *)products quantity:(NSUInteger)quantity completion:(void(^)(BOOL success, NSString* msg))completion
++ (void)payPequestProducts:(NSArray<NSString *> *)products req:(nullable PayAppInPurchaseRequest *)req type:(NSInteger)type completion:(void(^)(BOOL success, NSString* msg))completion
 {
     NSString *msg;
     if ([SKPaymentQueue canMakePayments]) {
         if (products.count>0) {
-            self.shared.quantity = quantity<1?1:quantity;
+            self.shared.req = req;
+            self.shared.type = type;
             SKProductsRequest *request = [[SKProductsRequest alloc] initWithProductIdentifiers:[NSSet setWithArray:products]];
             request.delegate = self.shared;
             [request start];
 
+            msg = @"In App Purchase 开始请求...";
+            PayLog(@"%@",msg);
             if (completion) {
-                msg = @"In App Purchase 开始请求...";
-                PayLog(@"%@",msg);
                 completion(YES,msg);
             }
         }else{
+            msg = @"error: Product id 不能为空";
+            PayLog(@"%@",msg);
             if (completion) {
-                msg = @"error: Product id 不能为空";
-                PayLog(@"%@",msg);
                 completion(NO,msg);
             }
         }
     }else{
+        msg = @"error: 请开启In App Purchase功能。";
+        PayLog(@"%@",msg);
         if (completion) {
-            msg = @"error: 请开启In App Purchase功能。";
-            PayLog(@"%@",msg);
             completion(NO,msg);
         }
     }
 }
 
 
-#pragma mark Pay Success or Pay Failed notifaction
+/**
+ * 恢复购买请求提交
+ * username：特定于应用程序的用户标识符。可选的。
+ * @completion
+ * success：请求是否提交成功
+ * msg：消息
+ */
++ (void)payRequestRestoresWithApplicationUsername:(nullable NSString *)username completion:(void(^)(BOOL success, NSString* msg))completion
+{
+    NSString *msg;
+    if ([SKPaymentQueue canMakePayments]) {
+        if (username) {
+            [[SKPaymentQueue defaultQueue] restoreCompletedTransactionsWithApplicationUsername:username];
+        }else{
+            [[SKPaymentQueue defaultQueue] restoreCompletedTransactions];
+        }
+        msg = @"In App Purchase 恢复购买 开始请求...";
+        PayLog(@"%@",msg);
+        if (completion) {
+            completion(YES,msg);
+        }
+    }else{
+        msg = @"error: 请开启In App Purchase功能。";
+        PayLog(@"%@",msg);
+        if (completion) {
+            completion(NO,msg);
+        }
+    }
+}
+
 
 
 #pragma mark SKProductsRequestDelegate
 
-//接收到产品的返回信息,然后用返回的商品信息进行发起购买请求
-//目前无法测试
+/**
+ * 接收到产品的返回信息,然后用返回的商品信息进行发起购买请求
+ * 状态：当前还没有测试
+ * PS：目前还不知道该方法返回的时所有productID信息，还是当前请求的product
+ * 如果是当前请求的productID信息，直接提交对应payment product即可；
+ * 如果是所有的productID信息，则需要提取出与当前请求一致的productID
+ */
 - (void)productsRequest:(SKProductsRequest *)request didReceiveResponse:(SKProductsResponse *)response
 {
-    NSArray *myProduct = response.products;
-    if (myProduct.count == 0) {
-        PayLog(@"没有查询到商品，支付失败");
-        PayLog(@"无效的Product ID列表：%@",response.invalidProductIdentifiers);
+    NSArray *products = response.products;
+    if (products.count == 0) {
+
+        NSString *msg = @"支付失败，没有查询到商品";
+        msg = [NSString stringWithFormat:@"%@\n无效的Product ID列表：%@",msg,response.invalidProductIdentifiers];
+        PayLog(@"%@",msg);
+        NSDictionary *info = @{@"msg":msg};
+        [self payFailedNotifaction:info];
         return;
     }
     PayLog(@"产品Product ID列表：%@",response.products);
 
     // populate UI
-    for(SKProduct *product in myProduct){
+    SKProduct *payProduct = nil;
+    for(SKProduct *product in products){
         PayLog(@"product info");
         PayLog(@"SKProduct 描述信息%@", [product description]);
         PayLog(@"产品标题 %@" , product.localizedTitle);
@@ -160,20 +206,37 @@ static BOOL _excludeOldTransactions = NO;
         PayLog(@"价格: %@" , product.price);
         PayLog(@"Product id: %@" , product.productIdentifier);
 
-//        // 11.如果后台消费条目的ID与我这里需要请求的一样（用于确保订单的正确性）
+//        // 如果后台消费条目的ID与我这里需要请求的一样（用于确保订单的正确性）
 //        if([product.productIdentifier isEqualToString:@"com.czchat.CZChat01"]){
-//            requestProduct = product;
+//            payProduct = product;
 //        }
     }
 
     //发送购买请求
-    SKProduct *product = myProduct.firstObject;//需要验证product id的一致性
-    if (self.quantity == 1) {
-        SKPayment * payment = [SKPayment paymentWithProduct:product];
+    payProduct = products.firstObject;//需要验证product id的一致性
+    if (self.req) {
+        SKMutablePayment * payment = [SKMutablePayment paymentWithProduct:payProduct];
+        payment.quantity = self.req.quantity;
+        if (self.req.applicationUsername) {
+            payment.applicationUsername = self.req.applicationUsername;
+        }
+        if (self.req.productIdentifier) {
+            payment.productIdentifier = self.req.productIdentifier;
+        }
+        if (self.req.applicationUsername) {
+            payment.requestData = self.req.requestData;
+        }
+        if (self.req.applicationUsername) {
+            payment.simulatesAskToBuyInSandbox = self.req.simulatesAskToBuyInSandbox;
+        }
+        if (@available(iOS 12.2, *)) {
+            if (self.req.paymentDiscount) {
+                payment.paymentDiscount = self.req.paymentDiscount;
+            }
+        }
         [[SKPaymentQueue defaultQueue] addPayment:payment];
     }else{
-        SKMutablePayment * payment = [SKMutablePayment paymentWithProduct:product];
-        payment.quantity = self.quantity;
+        SKPayment * payment = [SKPayment paymentWithProduct:payProduct];
         [[SKPaymentQueue defaultQueue] addPayment:payment];
     }
 }
@@ -181,13 +244,18 @@ static BOOL _excludeOldTransactions = NO;
 //请求失败
 - (void)request:(SKRequest *)request didFailWithError:(NSError *)error
 {
-    PayLog(@"请求失败，支付失败");
+    PayLog(@"支付失败，支付请求错误");
+    NSString *msg = @"支付失败，支付请求错误";
+    NSDictionary *info = @{@"msg":msg,@"error":error};
+    [self payFailedNotifaction:info];
 }
 
 //反馈请求的产品信息结束后
 - (void)requestDidFinish:(SKRequest *)request
 {
     PayLog(@"一次支付请求完成");
+    self.req = nil;
+    self.type = 0;
 }
 
 
@@ -204,7 +272,7 @@ static BOOL _excludeOldTransactions = NO;
                 [self completeTransaction:tran];
                 break;
             case SKPaymentTransactionStateRestored://已经购买过该商品
-                PayLog(@"恢复购买成功");
+                PayLog(@"已经购买过商品-恢复购买成功");
                 [self restoreTransaction:tran];
                 break;
             case SKPaymentTransactionStateFailed:
@@ -223,42 +291,109 @@ static BOOL _excludeOldTransactions = NO;
     }
 }
 
+/**
+ * 恢复购买完成时
+ * 函数中添加如下逻辑，用一个NSMutableArray来存储苹果回调过来给我们已经购买过的非消耗品的商品信息：
+ * test
+ */
+- (void)paymentQueueRestoreCompletedTransactionsFinished:(SKPaymentQueue *)queue
+{
+    NSMutableArray *purchasedItemIDs = [[NSMutableArray alloc] init];
+    PayLog(@"恢复购买未处理。。。");
+    PayLog(@"received restored transactions: %lu", (unsigned long)queue.transactions.count);
+    for (SKPaymentTransaction *transaction in queue.transactions)
+    {
+        NSString *productID = transaction.payment.productIdentifier;
+        [purchasedItemIDs addObject:productID];
+        NSLog(@"purchasedItemIDs:%@",purchasedItemIDs);
+    }
+}
 
+//恢复购买失败
+- (void)paymentQueue:(SKPaymentQueue *)queue restoreCompletedTransactionsFailedWithError:(NSError *)er
+{
+
+}
+
+#pragma mark 支付成功/失败时发送通知
+- (void)paySuccessNotifaction:(NSDictionary *)receiptDic
+{
+    NSMutableDictionary *userInfo = @{kNotificationUserInfoPayType:@(PayTypeAppInPurchase)}.mutableCopy;
+    if (receiptDic) {
+        [userInfo addEntriesFromDictionary:@{kNotificationUserInfoResultDic:receiptDic}];
+    }
+    [[NSNotificationCenter defaultCenter] postNotificationName:kNotificationNamePaySuccess object:nil userInfo:userInfo];
+}
+
+- (void)payFailedNotifaction:(NSDictionary *)info
+{
+    NSMutableDictionary *userInfo = @{kNotificationUserInfoPayType:@(PayTypeAppInPurchase),
+                                      kNotificationUserInfoResultDic:info
+    }.mutableCopy;
+    [[NSNotificationCenter defaultCenter] postNotificationName:kNotificationNamePayFailed object:nil userInfo:userInfo];
+}
+
+
+#pragma mark 交易状态处理
 
 // 交易失败
 - (void)failedTransaction:(SKPaymentTransaction *)transaction
 {
+    NSString *msg = nil;
     if(transaction.error.code != SKErrorPaymentCancelled) {
-        PayLog(@"购买失败");
+        PayLog(@"支付失败，购买失败");
+        msg = @"支付失败，购买失败";
     } else {
-        PayLog(@"用户取消交易");
+        PayLog(@"支付失败，用户取消交易");
+        msg = @"支付失败，用户取消交易";
     }
     [[SKPaymentQueue defaultQueue] finishTransaction: transaction];
 
+
+    NSDictionary *info = @{@"msg":msg,@"error":transaction.error};
+    [self payFailedNotifaction:info];
 }
 
 
-// 交易完成
+/**
+ * 交易完成
+ * 外部接收到支付成功通知之后，验证交易凭证
+ */
 - (void)completeTransaction:(SKPaymentTransaction *)transaction
 {
-    [self recordTransaction:transaction];
-    [self verifyReceiptWithTransaction:transaction];
+    //缓存交易记录
+    NSDictionary *receiptDic = [self recordTransaction:transaction];
+    //完成交易凭证
+    [[SKPaymentQueue defaultQueue] finishTransaction: transaction];
 
-//    [[SKPaymentQueue defaultQueue] finishTransaction: transaction];
+    //notifaction
+    [self paySuccessNotifaction:receiptDic];
 }
 
 
-// 恢复购买
+/**
+ * 恢复购买--非消耗型
+ * 验证：外部接收到支付成功通知之后，验证交易凭证--这儿不明确是否需要验证处理，
+ * PS:如果从transaction中拿不到交易凭证，那么需要使用transaction.downloads从apple服务器下载凭证再，进行处理。
+ *    并且验证的凭证数据不能再从checkRecordReceiptDataWithCompletion：中回调获取
+ *    目前还没有验证是否会有这种情况出现
+ */
 - (void)restoreTransaction:(SKPaymentTransaction *)transaction {
     // 对于已购商品，处理恢复购买的逻辑
-    [self recordTransaction:transaction];
-    [self verifyReceiptWithTransaction:transaction];
+    // Re-download the Apple-hosted content, then finish the transaction
+    // and remove the product identifier from the array of product IDs.
 
-//    [[SKPaymentQueue defaultQueue] finishTransaction: transaction];
+    //缓存交易记录
+    NSDictionary *receiptDic = [self recordTransaction:transaction];//transaction.originalTransaction
+    //完成交易凭证
+    [[SKPaymentQueue defaultQueue] finishTransaction: transaction];
+
+    //notifaction
+    [self paySuccessNotifaction:receiptDic];
 }
 
 
-#pragma mark 缓存记录
+#pragma mark 缓存交易记录
 - (NSUserDefaults *)receiptDefaults
 {
     NSUserDefaults *user = [[NSUserDefaults alloc] initWithSuiteName:@"AppInPurchaseTransaction"];
@@ -266,7 +401,7 @@ static BOOL _excludeOldTransactions = NO;
 }
 
 //记录交易记录
-- (void)recordTransaction:(SKPaymentTransaction *)transaction
+- (nullable NSDictionary *)recordTransaction:(SKPaymentTransaction *)transaction
 {
     NSString *path = [[NSBundle.mainBundle appStoreReceiptURL] path];
     if ([NSFileManager.defaultManager fileExistsAtPath:path] ) {
@@ -276,26 +411,24 @@ static BOOL _excludeOldTransactions = NO;
         NSString *transactionIdentifier = transaction.transactionIdentifier;
 
         NSString *key = [NSString stringWithFormat:@"%@+%@",transactionIdentifier,transactionDate];
-        NSDictionary *info = @{@"type":@(self.type),
+        NSDictionary *receiptDic = @{@"type":@(self.type),
                                @"key":key,
                                @"transactionIdentifier":transactionIdentifier,
                                @"transactionDate":transactionDate,
                                @"receiptData":receiptData
         };
-        [PayAppInPurchase addUserDefaultWithKey:key info:info];
+        [PayAppInPurchase addRecordReceiptDataWithKey:key receiptDic:receiptDic];
+        return receiptDic;
     }
+    return nil;
 }
 
-//移出支付操作完成的凭证缓存数据
-- (void)removeTransaction:(SKPaymentTransaction *)transaction
-{
-    NSString *transactionIdentifier = transaction.transactionIdentifier;
-    NSDate *transactionDate         = transaction.transactionDate;
-    NSString *key = [NSString stringWithFormat:@"%@+%@",transactionIdentifier,transactionDate];
-    [PayAppInPurchase deleteUserDefaultWithKey:key];
-}
-
-+ (NSDictionary *)addUserDefaultWithKey:(NSString *)key info:(NSDictionary *)info
+/**
+ * 添加交易收据凭证到缓存列表
+ * key：记录标识key
+ * receiptDic：具体的凭证数据
+ */
++ (NSDictionary *)addRecordReceiptDataWithKey:(NSString *)key receiptDic:(NSDictionary *)receiptDic
 {
     NSString *userKey = PayAppInPurchase.userID;
     NSUserDefaults *user = [self.shared receiptDefaults];
@@ -304,178 +437,94 @@ static BOOL _excludeOldTransactions = NO;
         userDic = @{};
     }
     NSMutableDictionary *mDic = [[NSMutableDictionary alloc] initWithDictionary:userDic];
-    [mDic setValue:info forKey:key];
+    [mDic setValue:receiptDic forKey:key];
     [user setValue:mDic forKey:userKey];
     [user synchronize];
 
-    return info;
+    return receiptDic;
 }
 
-+ (NSString *)deleteUserDefaultWithKey:(NSString *)cacheKey
+/**
+ * 移出支付凭证记录缓存
+ * key:记录唯一标识，从checkRecordReceiptDataWithCompletion:回调中的list.dic.key中获取
+ */
++ (NSString *)removeRecordReceiptDataWithKey:(NSString *)key
 {
     NSString *userKey = PayAppInPurchase.userID;
     NSUserDefaults *user = [self.shared receiptDefaults];
     NSDictionary *userDic = [user valueForKey:userKey];
-    if (user) {
+    if (user && userDic) {
+        NSDictionary *receiptDic = nil;//对应的收据凭证数据
         NSMutableDictionary *mDic = [[NSMutableDictionary alloc] initWithDictionary:userDic];
-        [mDic removeObjectForKey:cacheKey];
+        receiptDic = [mDic valueForKey:key];
+        [mDic removeObjectForKey:key];
         [user setValue:mDic forKey:userKey];
         [user synchronize];
+        //
+        NSDate *transactionDate = receiptDic[@"transactionDate"];
+        NSString *transactionIdentifier = receiptDic[@"transactionIdentifier"];
+        for (SKPaymentTransaction *transaction in SKPaymentQueue.defaultQueue.transactions) {
+            if ([transaction.transactionDate isEqualToDate:transactionDate] && [transactionIdentifier isEqualToString:transaction.transactionIdentifier]) {
+                [SKPaymentQueue.defaultQueue finishTransaction:transaction];
+            }
+        }
     }
-    return cacheKey;
+    return key;
 }
 
 
 /**
- 检测缓存的未验证的交易凭证,如果有回调自行验证
-
+ * 检查是否还有未验证的支付凭据,如果有需要验证收据凭证是否有效
+ * completion:在该块中检查是否有还没有验证的交易凭证
+ * isVerify：YES:需要验证，NO:不需要验证
+ * list：未验证的交易凭证列表，验证凭据是否有效时需要循环list列表中的item,
+ * itemDic结构：
+ *           type：自定义支付类型type
+ *           key：记录唯一标识，可用于删除验证完毕后的交易记录缓存
+ *           transactionIdentifier：该条交易凭证标识id
+ *           transactionDate：交易时间
+ *           receiptData：交易凭证NSData数据
+ * 验证方式：
+ *          1.使用自己的服务其验证凭证是否有效(推荐)
+ *          2.在App类向apple服务器发送验证请求(警告这样做不安全)
+ * App内验证：
+ *          只需要执行verifyReceiptData:completion:验证即可
+ * 验证结束：
+ *          需要执行removeRecordReceiptDataWithKey：移出已经验证的收据凭证缓存。
  */
-+ (void)checkVerifyPeceiptCompletion:(void(^)(BOOL verify, NSArray<NSDictionary *>* list))completion
++ (void)checkRecordReceiptDataWithCompletion:(void(^)(BOOL isVerify,  NSArray<NSDictionary *>* _Nullable list))completion
 {
     NSUserDefaults *user = [self.shared receiptDefaults];
     NSDictionary *dic = [user valueForKey:PayAppInPurchase.userID];
-    if (dic.count > 0) {
+    if (dic.count>0) {
         NSArray *allValues = dic.allValues;
-        if (PayAppInPurchase.verifyType == 0) {//Apple内部验证
-            //一般一会有一个，这儿，直接循环处理，外部最好依次处理
-            for (NSDictionary *dic in allValues) {
-                NSString *key = dic[@"key"];
-                NSData *receiptData = dic[@"receiptData"];
-                [self.shared verifyReceiptData:receiptData completion:^(NSInteger status) {
-                    if (status == 1) {
-                        PayLog(@"成功。凭证有效");
-                        [self deleteUserDefaultWithKey:key];
-                    }else if (status == 0){
-                        PayLog(@"失败，凭证无效");
-                        [self deleteUserDefaultWithKey:key];
-                    }else{
-                        PayLog(@"网络错误，需要重新验证");
-                    }
-                }];
-            }
-        }else{
-            if (completion) {
-                completion(YES,allValues);
-            }
+        if (completion) {
+            completion(YES,allValues);
+        }
+    }else{
+        if (completion) {
+            completion(NO,nil);
         }
     }
 }
 
 
-
-//交易请求之前，还需要检查是否还有缓存未验证的交易记录
-
-
-#pragma mark 验证交易凭证
-//处理交易数据并验证
-//⚠️：验证时需要将数据缓存在本地，防止网络请求失败，APP中断等问题 （还没有处理）
-- (void)verifyReceiptWithTransaction:(SKPaymentTransaction *)transaction
-{
-    NSString * productIdentifier = transaction.payment.productIdentifier;
-    PayLog(@"交易完成Identifier %@", productIdentifier);
-
-    // 验证凭据，获取到苹果返回的交易凭据
-    // appStoreReceiptURL iOS7.0增加的，购买交易完成后，会将凭据存放在该地址
-    // 从沙盒中获取到购买凭据(原始数据)
-    NSURL *receiptURL = [[NSBundle mainBundle] appStoreReceiptURL];
-    NSData *receiptData = [NSData dataWithContentsOfURL:receiptURL];
-//    NSString * receiptStr = [[NSString alloc]initWithData:receiptData encoding:NSUTF8StringEncoding];
-
-    if (PayAppInPurchase.verifyType == 0) {//直接通过Apple验证
-        [self verifyReceiptData:receiptData completion:^(NSInteger status) {
-            if (status == 1 ) {
-                PayLog(@"成功。凭证有效");
-            }else if(status == 0){
-                PayLog(@"失败，凭证无效");
-            }else{
-                PayLog(@"网络错误，需要重新验证");
-            }
-        }];
-    }else{//直接自己的服务器验证
-
-    }
-
-    //不管交易成功还是失败，Apple Store支付这一步已经完成，只会存在该条交易验证与否，判断该交易是否有效而已。
-    [[SKPaymentQueue defaultQueue] finishTransaction: transaction];
-
-
-//    if (PayAppInPurchase.verifyType == 0) {//直接通过Apple验证
-//        //处理凭证类型
-//        NSString *environment= [self environmentForReceipt:receiptStr];
-//        //凭证base64编码
-//        NSString *encodeStr = [receiptData base64EncodedStringWithOptions:kNilOptions];
-//        NSString *sendString = [NSString stringWithFormat:@"{\"receipt-data\" : \"%@\"}", encodeStr];
-//        NSLog(@"_____%@",sendString);
-//        NSURL *StoreURL=nil;
-//        if ([environment isEqualToString:@"environment=Sandbox"]) {
-//            StoreURL= [[NSURL alloc] initWithString: @"https://sandbox.itunes.apple.com/verifyReceipt"];
-//        }else{
-//            StoreURL= [[NSURL alloc] initWithString: @"https://buy.itunes.apple.com/verifyReceipt"];
-//        }
-//        //这个二进制数据由服务器进行验证；zl
-//        NSData *postData = [NSData dataWithBytes:[sendString UTF8String] length:[sendString length]];
-//        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:StoreURL];
-//        [request setHTTPMethod:@"POST"];
-//        [request setTimeoutInterval:50.0];//120.0---50.0zl
-//        [request setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
-//        [request setHTTPBody:postData];
-//
-//        //验证时需要将数据缓存在本地，防止网络请求失败，APP中断等问题
-//        //开始请求
-//        NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-//            if (error) {
-//                PayLog(@"验证购买过程中发生错误，错误信息：%@",error.localizedDescription);
-//            }else{
-//                NSDictionary *dic=[NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:nil];
-//                PayLog(@"App In Pruchase verify data:%@",dic);
-//                NSInteger status = [dic[@"status"] integerValue];
-//                [self machVerifyCode:status];
-//                if (status == 0) {
-//                    PayLog(@"凭证有效，验证成功，即整个支付操作成功！");
-//                    //处理验证结果逻辑，并把操作发送给服务端
-//                    [self sendApplePayDataToServerRequsetWith:transaction];
-//                }else{
-//                    PayLog(@"凭证无效，验证失败，即整个支付操作失败");
-//                }
-//            }
-//
-//        }];
-//        [task resume];
-//
-//    }else{//向自己的服务器验证购买凭证
-//        //回调传送到外部自己的服务其验证处理处理receiptData
-//        //
-//    }
-
-//    //不管交易成功还是失败，Apple Store支付这一步已经完成，只会存在该条交易验证与否，判断该交易是否有效而已。
-//    [[SKPaymentQueue defaultQueue] finishTransaction: transaction];
-}
 
 /**
- 验证支付凭证数据
- receiptData：凭证数据
- completion：验证完毕后回调
- status:凭证验证状态
-        0：失败，凭证无效
-        1：成功。凭证有效
-        2：网络错误，需要重新验证
+ * 验证支付凭证数据，直接在App中向apple服务器发送验证信息
+ * receiptData：凭证数据
+ * @completion：验证完毕后回调
+ * status:凭证验证状态
+ *        0：失败，凭证无效
+ *        1：成功。凭证有效
+ *        2：网络错误，需要重新验证
  */
-- (void)verifyReceiptData:(NSData *)receiptData completion:(void(^)(NSInteger status))completion
++ (void)verifyReceiptData:(NSData *)receiptData completion:(void(^)(NSInteger status))completion
 {
-    if (!receiptData) {
-        PayLog(@"receiptData数据为空，验证失败");
-        if (completion) {
-            completion(0);
-        }
-        return;
-    }
     NSString * receiptStr = [[NSString alloc]initWithData:receiptData encoding:NSUTF8StringEncoding];
-    //处理凭证类型
-    NSString *environment= [self environmentForReceipt:receiptStr];
     //凭证base64编码
     NSString *encodeStr = [receiptData base64EncodedStringWithOptions:kNilOptions];
 
-//    NSString *sendString = [NSString stringWithFormat:@"{\"receipt-data\" : \"%@\"}", encodeStr];
     NSMutableDictionary *mBody = @{@"receipt-data":encodeStr}.mutableCopy;
     [mBody addEntriesFromDictionary:@{@"exclude-old-transactions":@(PayAppInPurchase.excludeOldTransactions)}];
     if (PayAppInPurchase.password) {
@@ -486,7 +535,7 @@ static BOOL _excludeOldTransactions = NO;
     PayLog(@"requestBody：%@",sendString);
 
     NSURL *StoreURL=nil;
-    if ([environment isEqualToString:@"environment=Sandbox"]) {
+    if ([self isSandboxWithReceiptString:receiptStr]) {
         StoreURL= [[NSURL alloc] initWithString: @"https://sandbox.itunes.apple.com/verifyReceipt"];
     }else{
         StoreURL= [[NSURL alloc] initWithString: @"https://buy.itunes.apple.com/verifyReceipt"];
@@ -495,7 +544,7 @@ static BOOL _excludeOldTransactions = NO;
     NSData *postData = [NSData dataWithBytes:[sendString UTF8String] length:[sendString length]];
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:StoreURL];
     [request setHTTPMethod:@"POST"];
-    [request setTimeoutInterval:50.0];//120.0---50.0zl
+//    [request setTimeoutInterval:50.0];//120.0---50.0zl
     [request setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
     [request setHTTPBody:postData];
 
@@ -511,7 +560,7 @@ static BOOL _excludeOldTransactions = NO;
             NSDictionary *dic=[NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:nil];
             PayLog(@"App In Pruchase verify data:%@",dic);
             NSInteger status = [dic[@"status"] integerValue];
-            [self machVerifyCode:status];
+            [self.shared machVerifyCode:status];
             
             BOOL verifyStatus = status==0?YES:NO;
             NSInteger code = verifyStatus?1:0;
@@ -574,30 +623,15 @@ static BOOL _excludeOldTransactions = NO;
     }
 }
 
-//凭证验证成功之后向服务器发送其它的逻辑处理结果
-- (void)sendApplePayDataToServerRequsetWith:(SKPaymentTransaction *)transaction
++ (BOOL)isSandboxWithReceiptString:(NSString *)receiptStr
 {
-    //1.移出缓存的凭证数据
-    [self removeTransaction:transaction];
-
-    //2.处理支付成功之后的逻辑，并将结果发送给服务器
+    NSString *sandbox = @"environment=Sandbox";
+    if ([receiptStr.lowercaseString containsString:sandbox.lowercaseString]) {
+        return YES;
+    }
+    return NO;
 }
 
 
-
-
--(NSString * )environmentForReceipt:(NSString * )str
-{
-    str = [str stringByReplacingOccurrencesOfString:@"\r" withString:@""];
-    str = [str stringByReplacingOccurrencesOfString:@"\n" withString:@""];
-    str = [str stringByReplacingOccurrencesOfString:@"\t" withString:@""];
-    str = [str stringByReplacingOccurrencesOfString:@" " withString:@""];
-    str = [str stringByReplacingOccurrencesOfString:@"\"" withString:@""];
-    NSArray * arr = [str componentsSeparatedByString:@";"];
-
-    //存储收据环境的变量
-    NSString * environment = arr[2];
-    return environment;
-}
 
 @end

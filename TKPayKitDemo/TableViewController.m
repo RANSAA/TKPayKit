@@ -80,7 +80,7 @@
                        @"com.czchat.CZChat02",
                        @"com.czchat.CZChat03"
         ];
-        [PayAppInPurchase payPequestProducts:pro quantity:1 completion:^(BOOL success, NSString * _Nonnull msg) {
+        [PayAppInPurchase payPequestProducts:pro req:nil type:0 completion:^(BOOL success, NSString * _Nonnull msg) {
 
         }];
     }

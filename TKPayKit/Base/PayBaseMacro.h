@@ -12,8 +12,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *kNotificationNamePaySuccess;//支付成功
 extern NSString *kNotificationNamePayFailed;//支付失败
-extern NSString *kNotificationUserInfoPayType;//通知userinfo.key，支付类型
-extern NSString *kNotificationUserInfoResultData;//通知userinfo.key，支付结果(可为空)，类型：NSDictionary
+
+extern NSString *kNotificationUserInfoPayType;//通知userinfo.key，支付类型,区分使用的那种支付方式
+extern NSString *kNotificationUserInfoResultDic;//通知userinfo.key，支付结果(可为空)，类型：NSDictionary
 
 /**支付类型 */
 typedef NS_ENUM(NSInteger, PayType){

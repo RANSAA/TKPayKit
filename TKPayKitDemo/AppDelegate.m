@@ -24,40 +24,29 @@
 
 
     [PayAppInPurchase registerApp];
-
-//    NSString *str = @"";
-//    NSDictionary *dic = @{@"111":@"111",@"str":str};
-//    NSLog(@"dic:%@",dic);
-    NSString *path = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) lastObject];
-    path = [path stringByAppendingFormat:@"/Preferences/AppInPurchase.plist"];
-    NSLog(@"path:%@",path);
-//
-////    path = [NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES) lastObject];
-////    path = [path stringByAppendingFormat:@"/TKPayDemo.text"];
-//    NSError *err = nil;
-//    [path writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:&err];
-//    if (err) {
-//        NSLog(@"err:%@",err);
-//    }
-//
-//    NSUserDefaults *ser = [[NSUserDefaults alloc] initWithSuiteName:@"123"];
-//    [ser setBool:YES forKey:@"Test"];
-//    [ser synchronize];
-
-    NSString *key = [NSString stringWithFormat:@"%d+%@",arc4random(),[NSDate new]];
-    NSDictionary *info = @{@"1":@"2"};
-//    [self addUserDefaultWithKey:key info:info];
-    [self deleteUserDefaultWithKey:@"-888014090+2021-09-09 15:24:27 +0000"];
-
-    NSMutableDictionary *mBody = @{@"receipt-data":@"encodeStr"}.mutableCopy;
-    [mBody addEntriesFromDictionary:@{@"exclude-old-transactions":@(PayAppInPurchase.excludeOldTransactions)}];
-    if (PayAppInPurchase.password) {
-        [mBody addEntriesFromDictionary:@{@"password":PayAppInPurchase.password}];
-    }
-    NSData* mData = [NSJSONSerialization dataWithJSONObject:mBody options:kNilOptions error:nil];
-    NSString *sendString = [[NSString alloc] initWithData:mData encoding:NSUTF8StringEncoding];
-    PayLog(@"sendString:%@",sendString);
-
+    [PayAppInPurchase checkRecordReceiptDataWithCompletion:^(BOOL isVerify, NSArray<NSDictionary *> * _Nullable list) {
+        if (isVerify) {
+            for (NSDictionary *dic in list) {
+                NSString *key = dic[@"key"];
+                NSInteger type = [dic[@"type"] integerValue];
+                NSString *transactionIdentifier = dic[@"transactionIdentifier"];
+                NSDate *transactionDate = dic[@"transactionDate"];
+                NSData *receiptData = dic[@"receiptData"];
+                //依次验证凭证,或者使用自己的服务器验证
+                [PayAppInPurchase verifyReceiptData:receiptData completion:^(NSInteger status) {
+                    if (status == 0) {
+                        PayLog(@"验证失败");
+                        [PayAppInPurchase removeRecordReceiptDataWithKey:key];
+                    }else if (status == 1){
+                        PayLog(@"验证失败");
+                        [PayAppInPurchase removeRecordReceiptDataWithKey:key];
+                    }else{
+                        PayLog(@"网络错误，需要从新验证");
+                    }
+                }];
+            }
+        }
+    }];
 
     return YES;
 }

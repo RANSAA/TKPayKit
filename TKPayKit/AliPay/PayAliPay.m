@@ -59,7 +59,7 @@
     PayLog(@"AlipaySDK result = %@",resultDic);
 
     NSDictionary *userinfo = @{kNotificationUserInfoPayType:@(PayTypeAliPay),
-                               kNotificationUserInfoResultData:resultDic
+                               kNotificationUserInfoResultDic:resultDic
     };
     NSInteger code = [resultDic[@"resultStatus"] integerValue];
     if (code == 9000) {

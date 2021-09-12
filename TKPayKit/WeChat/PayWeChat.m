@@ -168,7 +168,7 @@
         NSArray *keys = @[@"returnKey",@"errCode",@"errStr",@"type"];
         NSDictionary *resultDic = [tmpResp dictionaryWithValuesForKeys:keys];
         NSDictionary *userinfo = @{kNotificationUserInfoPayType:@(PayTypeWeChat),
-                                   kNotificationUserInfoResultData:resultDic
+                                   kNotificationUserInfoResultDic:resultDic
 
         };
         switch (tmpResp.errCode) {

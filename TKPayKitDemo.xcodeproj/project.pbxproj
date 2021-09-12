@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		3F12B7B626E605250036AAD7 /* apple-app-site-association in Resources */ = {isa = PBXBuildFile; fileRef = 3F12B7B526E605250036AAD7 /* apple-app-site-association */; };
 		3F36690126E6084A00F8BA27 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F36690026E6084A00F8BA27 /* AudioToolbox.framework */; };
+		3F7CFBF726EE44D0005589F5 /* PayAppInPurchaseRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F7CFBF626EE44D0005589F5 /* PayAppInPurchaseRequest.m */; };
 		3F8B97E726E786EC0063C17E /* PayBaseMacro.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F8B97E626E786EC0063C17E /* PayBaseMacro.m */; };
 		3F8B97EB26E787000063C17E /* PayAliPay.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F8B97EA26E787000063C17E /* PayAliPay.m */; };
 		3F8B97EF26E787140063C17E /* PayWeChat.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F8B97EE26E787140063C17E /* PayWeChat.m */; };
@@ -30,6 +31,8 @@
 		3F12B7B526E605250036AAD7 /* apple-app-site-association */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "apple-app-site-association"; sourceTree = "<group>"; };
 		3F3668FF26E6084A00F8BA27 /* TKPayKitDemo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TKPayKitDemo.entitlements; sourceTree = "<group>"; };
 		3F36690026E6084A00F8BA27 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		3F7CFBF526EE44D0005589F5 /* PayAppInPurchaseRequest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PayAppInPurchaseRequest.h; sourceTree = "<group>"; };
+		3F7CFBF626EE44D0005589F5 /* PayAppInPurchaseRequest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PayAppInPurchaseRequest.m; sourceTree = "<group>"; };
 		3F8B97E526E786EC0063C17E /* PayBaseMacro.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PayBaseMacro.h; sourceTree = "<group>"; };
 		3F8B97E626E786EC0063C17E /* PayBaseMacro.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PayBaseMacro.m; sourceTree = "<group>"; };
 		3F8B97E926E787000063C17E /* PayAliPay.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PayAliPay.h; sourceTree = "<group>"; };
@@ -113,6 +116,8 @@
 			children = (
 				3F8B97FB26E78A050063C17E /* PayAppInPurchase.h */,
 				3F8B97FC26E78A050063C17E /* PayAppInPurchase.m */,
+				3F7CFBF526EE44D0005589F5 /* PayAppInPurchaseRequest.h */,
+				3F7CFBF626EE44D0005589F5 /* PayAppInPurchaseRequest.m */,
 			);
 			path = AppInPurchase;
 			sourceTree = "<group>";
@@ -313,6 +318,7 @@
 				3F8B97EB26E787000063C17E /* PayAliPay.m in Sources */,
 				3FD7F85726E5E9E700B7FE47 /* SceneDelegate.m in Sources */,
 				3FCCA8E826E61B4800DEBBB0 /* TableViewController.m in Sources */,
+				3F7CFBF726EE44D0005589F5 /* PayAppInPurchaseRequest.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -11,8 +11,8 @@
 
 NSString *kNotificationNamePaySuccess = @"kNotificationNamePaySuccess";
 NSString *kNotificationNamePayFailed  = @"kNotificationNamePayFailed";
-NSString *kNotificationUserInfoPayType      = @"payType";
-NSString *kNotificationUserInfoResultData   = @"data";
+NSString *kNotificationUserInfoPayType     = @"payType";
+NSString *kNotificationUserInfoResultDic   = @"result";
 
 
 
